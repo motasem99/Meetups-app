@@ -1,48 +1,61 @@
+const { MongoClient, ObjectId } = require('mongodb');
 import MeetupDetail from '../../components/meetups/MeetupDetail';
 
 function MeetupDetails(props) {
-  const { meetupData } = props;
-
   return (
     <MeetupDetail
-      image='https://filedn.com/ltOdFv1aqz1YIFhf4gTY8D7/ingus-info/BLOGS/Photography-stocks3/stock-photography-slider.jpg'
-      title='A first meetup'
-      address='Palestine, Gaza'
-      description='The meetup description'
+      image={props.meetupData.image}
+      title={props.meetupData.title}
+      address={props.meetupData.address}
+      description={props.meetupData.description}
     />
   );
 }
 
 export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    'mongodb+srv://mutasem-NextjsProject:2741999@cluster0.6sm4t.mongodb.net/meetups?retryWrites=true&w=majority'
+  );
+
+  const db = client.db();
+  const meetupsCollection = db.collection('meetups');
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: 'm1',
-        },
-      },
-      {
-        params: {
-          meetupId: 'm2',
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
   };
 }
 
 export async function getStaticProps(context) {
   const meetupId = context.params.meetupId;
 
+  const client = await MongoClient.connect(
+    'mongodb+srv://mutasem-NextjsProject:2741999@cluster0.6sm4t.mongodb.net/meetups?retryWrites=true&w=majority'
+  );
+
+  const db = client.db();
+  const meetupsCollection = db.collection('meetups');
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId),
+  });
+
+  client.close();
+
   return {
     props: {
       meetupData: {
-        image:
-          'https://filedn.com/ltOdFv1aqz1YIFhf4gTY8D7/ingus-info/BLOGS/Photography-stocks3/stock-photography-slider.jpg',
-        id: meetupId,
-        title: 'A first meetup',
-        address: 'Palestine, Gaza',
-        description: 'The meetup description',
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        address: selectedMeetup.address,
+        image: selectedMeetup.image,
+        description: selectedMeetup.description,
       },
     },
   };
